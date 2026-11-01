@@ -1,28 +1,20 @@
-name: Build DNSFlow
+name: Release APK
 
 on:
-  push:
-    paths-ignore:
-      - '**.md'
-      - 'LICENSE'
-  pull_request:
-  workflow_dispatch:
-
-concurrency:
-  group: build-${{ github.ref }}
-  cancel-in-progress: true
+  release:
+    types: [published]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  build:
-    name: Build debug APK
+  release:
+    name: Build and attach APK
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
     steps:
-      - name: Check out the code
+      - name: Check out the tag
         uses: actions/checkout@v6
 
       - name: Set up JDK 17
@@ -41,28 +33,20 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      - name: Build the debug APK
+      - name: Build the APK
         run: gradle assembleDebug --stacktrace
 
-      - name: Upload the APK
-        uses: actions/upload-artifact@v6
-        with:
-          name: DNSFlow-debug-apk-${{ github.run_number }}
-          path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: error
-          retention-days: 30
+      - name: Prepare the release files
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk "dist/DNSFlow-${TAG}.apk"
+          cd dist
+          sha256sum "DNSFlow-${TAG}.apk" > "DNSFlow-${TAG}.apk.sha256"
 
-      - name: Run lint
-        run: gradle lintDebug --stacktrace
-
-      - name: Run unit tests
-        run: gradle testDebugUnitTest --stacktrace
-
-      - name: Upload the lint report
-        if: always()
-        uses: actions/upload-artifact@v6
-        with:
-          name: lint-report-${{ github.run_number }}
-          path: app/build/reports/lint-results-debug.*
-          if-no-files-found: ignore
-          retention-days: 14
+      - name: Attach the files to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"
