@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">DNSFlow</string>
+    <string name="vpn_channel_name">DNSFlow connection</string>
+    <string name="vpn_notification_title">DNSFlow is active</string>
+    <string name="vpn_notification_text">Your DNS traffic is routed through an encrypted resolver</string>
+</resources>
