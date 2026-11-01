@@ -106,7 +106,7 @@ class DohResolver(
 /** Creates sockets that are exempt from the VPN before they connect. */
 private class ProtectedSocketFactory(private val network: UpstreamNetwork) : SocketFactory() {
 
-    override fun createSocket(): Socket = newProtectedSocket()
+    override fun createSocket(): Socket = newProtectedSocket(null)
 
     override fun createSocket(host: String, port: Int): Socket =
         connected(InetSocketAddress(network.resolve(host).first(), port), null)
@@ -134,19 +134,24 @@ private class ProtectedSocketFactory(private val network: UpstreamNetwork) : Soc
         InetSocketAddress(localAddress, localPort)
     )
 
-    private fun newProtectedSocket(): Socket {
+    /** Binds to [local] first when one is given, then exempts the socket from the VPN. */
+    private fun newProtectedSocket(local: InetSocketAddress?): Socket {
         val socket = Socket()
-        if (!network.protect(socket)) {
+        try {
+            if (local != null) socket.bind(local)
+            if (!network.protect(socket)) {
+                throw IOException("Could not exempt the socket from the VPN")
+            }
+        } catch (e: IOException) {
             socket.close()
-            throw IOException("Could not exempt the socket from the VPN")
+            throw e
         }
         return socket
     }
 
     private fun connected(remote: InetSocketAddress, local: InetSocketAddress?): Socket {
-        val socket = newProtectedSocket()
+        val socket = newProtectedSocket(local)
         try {
-            if (local != null) socket.bind(local)
             socket.connect(remote)
         } catch (e: IOException) {
             socket.close()
