@@ -93,6 +93,8 @@ Changing a setting while connected restarts the tunnel with the new setting.
 
 To check that it works with the Cloudflare provider selected, open [1.1.1.1/help](https://1.1.1.1/help). It reports whether your DNS queries use DoH or DoT.
 
+If **Connect** does not work, see [Troubleshooting](#troubleshooting).
+
 ## Privacy
 
 - DNSFlow does not log or store your DNS queries.
@@ -115,8 +117,46 @@ To check that it works with the Cloudflare provider selected, open [1.1.1.1/help
 - Apps or devices that use their own hard-coded DNS server or their own DoH are not affected by DNSFlow.
 - Android's **Private DNS** setting must be **Off** or **Automatic**. In **Strict** mode Android uses its own DoT server and bypasses DNSFlow.
 - Android allows one active VPN at a time. Starting another VPN app turns DNSFlow off.
+- Some networks and ISPs block DoH, DoT, or both. DNSFlow cannot connect there (see [Troubleshooting](#troubleshooting)). It does not bypass censorship or deep packet inspection.
 - Fragmented IPv4 packets and IPv6 packets with extension headers are ignored. DNS queries do not normally use them.
 - Not supported: DNS over QUIC, DoH over HTTP/3, blocklists, and per-app rules.
+
+## Troubleshooting
+
+### "Cannot reach the DNS server"
+
+DNSFlow set up its tunnel but could not reach the resolver. A common cause is a network or ISP that blocks encrypted DNS. DoT (port 853) is blocked more often than DoH (port 443). Try these in order:
+
+1. Switch the protocol between **DoH** and **DoT**.
+2. Pick another built-in provider, for example AdGuard DNS, Quad9 or Control D.
+3. Switch between Wi-Fi and mobile data.
+4. Use a **Custom server** with a different host name. Some blocks match only the well-known names. For example, Cloudflare also serves DoH at `https://security.cloudflare-dns.com/dns-query` (this variant blocks malware). Enter `1.1.1.2` as the **Server IP** so DNSFlow does not need to look the name up.
+5. If every public resolver fails, the network probably blocks their IP addresses. Then you need a resolver whose addresses are not blocked, for example your own DoH server.
+
+### "Could not set up a secure (TLS) connection"
+
+The server's certificate could not be verified. DNSFlow never skips certificate checks.
+
+- Make sure your phone's date and time are set automatically.
+- For a custom server, check that the certificate is valid for the host name you entered.
+
+### Connected, but websites do not load
+
+- Set Android's **Private DNS** to **Off** or **Automatic** (Settings, Network and internet, Private DNS).
+- Turn off other VPN apps. Android allows only one VPN at a time.
+- Try another provider. The resolver itself may be slow or unavailable.
+
+### "VPN permission was revoked" or the VPN turns off by itself
+
+Another VPN app probably took over, or the VPN permission was removed. Tap **Connect** again and accept Android's VPN request.
+
+### No notification is shown
+
+On Android 13 and newer the notification needs a permission, but it is optional. The VPN works without it.
+
+### "App not installed" when updating
+
+Beta builds are signed with a debug key that changes between builds. Uninstall the old version first, then install the new one.
 
 ## Build from source
 
